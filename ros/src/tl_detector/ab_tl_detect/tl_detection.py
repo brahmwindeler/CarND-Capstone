@@ -1,6 +1,8 @@
 import tensorflow as tf
 import numpy as np
 from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageColor
 import os
 import time
 import tarfile
@@ -8,6 +10,9 @@ import rospy
 
 MODELS_DIR=os.path.join(os.path.dirname(__file__),'include')
 
+# Colors (one for each class)
+cmap = ImageColor.colormap
+COLOR_LIST = sorted([c for c in cmap.keys()])
 
 def load_graph(graph_file):
     """Loads a frozen inference graph"""
@@ -97,7 +102,15 @@ class TLDetection(object):
 
         return boxes, scores, classes, times
 
-        
+    def draw_boxes(image, boxes, classes, thickness=4):
+        """Draw bounding boxes on the image"""
+        draw = ImageDraw.Draw(image)
+        for i in range(len(boxes)):
+            bot, left, top, right = boxes[i, ...]
+            class_id = int(classes[i])
+            color = COLOR_LIST[class_id]
+            draw.line([(left, top), (left, bot), (right, bot), (right, top), (left, top)], width=thickness, fill=color)
+
     def detect_traffic_lights(self, image):
         width, height = image.size
         factor = 224.0 / width
@@ -121,10 +134,10 @@ class TLDetection(object):
             if not os.path.exists("./output/"):
                 os.mkdir("/home/student/output/")
             fname = "/home/student/output/{}.png".format(self.img_count)
+            self.draw_boxes(image, boxes, classes)
             image.save(fname)
             self.img_count = self.img_count + 1
 
-        cnt = 0
         for box in box_coords:
             top,left,bottom,right = box
             traffic_light = image.crop(
@@ -135,16 +148,6 @@ class TLDetection(object):
                     int(bottom)
                 )
             )
-
-            if (self.log_output):
-                if not os.path.exists("./output/"):
-                    os.mkdir("/home/student/output/")
-
-                fname = "/home/student/output/{}_{}.png".format(self.img_count, cnt)
-                cnt = cnt + 1
-                traffic_light.save(fname)
-                rospy.loginfo("[TLDetection] -> Traffic light saved: " + fname)
-
             cropped_images.append(traffic_light)
         
         rospy.loginfo("[TLDetection] -> Traffic light(s) detected: " + str(len(cropped_images)) 
