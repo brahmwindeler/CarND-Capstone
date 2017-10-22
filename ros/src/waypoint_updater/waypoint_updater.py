@@ -95,10 +95,10 @@ class WaypointUpdater(object):
             waypoints_ahead = [item[0] for item in waypoints_ahead[:LOOKAHEAD_WPS]]
 
             # Apply deceleration if there's a traffic light nearby
+            
             if self.red_tl_index > -1:
 
                 relative_tl_index = self.red_tl_index - closest_index
-
                 if relative_tl_index < LOOKAHEAD_WPS:
                     waypoints_ahead = self.apply_deceleration(waypoints_ahead, relative_tl_index)
                 else:
@@ -163,25 +163,38 @@ class WaypointUpdater(object):
             This function takes in a set of waypoints and the index value of the traffic light waypoint.
             The return of this method is an updated list of waypoints.
         """
-        rospy.logerr('waypoints length: {} tl_index: {}'.format(len(waypoints), tl_index))
+        # rospy.logerr('waypoints length: {} tl_index: {}'.format(len(waypoints), tl_index))
         if tl_index < len(waypoints):
-
-            stopping_index = max(10, tl_index-25)
+            # if we are already over the white line, keep going.             
+            if tl_index < 30:
+                if VERBOSE:
+                    rospy.logerr("Traffic light too close to stop safely")
+                return waypoints
+            # get the waypoint for the traffic light and then subtract 30 because the light is at the other side of the intersection and we stop at the white line
+            stopping_index = tl_index-30
+            if VERBOSE:
+                rospy.logerr('Traffic Light index: {} target index to stop at: {}'.format(tl_index, stopping_index))
 
             last_wp = waypoints[stopping_index]
             last_wp.twist.twist.linear.x = 0.0
 
             # iterate the list of waypoints and set a velocity to slow us down
-            for waypoint in waypoints[:stopping_index]:
-                distance = self.get_distance_2_points(waypoint.pose.pose.position, last_wp.pose.pose.position)
-                # add a bit of a buffer to the stop distance.
-                distance = max(0, distance - 5)
-                target_vel = math.sqrt(2 *0.2 * distance )
-                # if we are below 1.0, just go ahead and stop
-                if target_vel < 1.0:
-                    target_vel = 0
-                # update the individual waypoints
-                waypoint.twist.twist.linear.x = min(target_vel, waypoint.twist.twist.linear.x)
+            #for waypoint in waypoints[:stopping_index]:
+            for index, waypoint in enumerate(waypoints[:-1]):
+                if index <= stopping_index:
+                    distance = self.get_distance_2_points(waypoint.pose.pose.position, last_wp.pose.pose.position)
+                    
+                    target_vel = math.sqrt(2 *.25 * distance )
+                    # if we are below 1.0, just go ahead and stop
+                    if target_vel < 1.0:
+                        target_vel = 0
+                    if VERBOSE:
+                        rospy.logerr("target_vel is: " + str(float(target_vel)))
+                    # update the individual waypoints
+                    waypoint.twist.twist.linear.x = min(target_vel, waypoint.twist.twist.linear.x)
+                else:
+                    # every waypoint past the target stopping ppoint should be set to 0.
+                    waypoint.twist.twist.linear.x =  0
 
         return waypoints
 

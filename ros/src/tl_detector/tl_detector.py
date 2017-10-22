@@ -24,7 +24,7 @@ from waypoint_helper import get_simple_distance_from_waypoint
 STATE_COUNT_THRESHOLD = 3
 TL_NEARNESS_THRESHOLD = 150
 VERBOSE = False
-PREFER_GROUND_TRUTH = False
+PREFER_GROUND_TRUTH = True
 
 
 class TLDetector(object):
