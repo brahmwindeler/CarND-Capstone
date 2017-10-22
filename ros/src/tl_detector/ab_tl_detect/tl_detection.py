@@ -40,9 +40,15 @@ def load_graph(graph_file):
 
 def draw_boxes(image, boxes, classes, thickness=4):
     """Draw bounding boxes on the image"""
+    width, height = image.size
+    box_coords = np.zeros_like(boxes)
+    box_coords[:, 0] = boxes[:, 0] * height
+    box_coords[:, 1] = boxes[:, 1] * width
+    box_coords[:, 2] = boxes[:, 2] * height
+    box_coords[:, 3] = boxes[:, 3] * width
     draw = ImageDraw.Draw(image)
     for i in range(len(boxes)):
-        bot, left, top, right = boxes[i, ...]
+        bot, left, top, right = box_coords[i, ...]
         class_id = int(classes[i])
         color = COLOR_LIST[class_id]
         draw.line([(left, top), (left, bot), (right, bot), (right, top), (left, top)], width=thickness, fill=color)

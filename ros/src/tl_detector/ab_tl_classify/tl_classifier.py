@@ -49,11 +49,11 @@ class TLClassifier(object):
                 t0 = time.time()
                 img = np.asarray(images[i])
 
-                rospy.loginfo("[TL Classifier] -> Input shape: " + str(img.shape))
+                #rospy.loginfo("[TL Classifier] -> Input shape: " + str(img.shape))
 
                 pred = self.model.predict(img[None, :, :, 0:3], batch_size=1)[0]
 
-                rospy.loginfo("[TL Classifier] -> Prediction: " + str(pred))
+                #rospy.loginfo("[TL Classifier] -> Prediction: " + str(pred))
 
                 predictions.append(pred)
                 
