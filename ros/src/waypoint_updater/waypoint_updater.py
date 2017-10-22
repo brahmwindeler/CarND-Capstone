@@ -176,7 +176,7 @@ class WaypointUpdater(object):
                 distance = self.get_distance_2_points(waypoint.pose.pose.position, last_wp.pose.pose.position)
                 # add a bit of a buffer to the stop distance.
                 distance = max(0, distance - 5)
-                target_vel = math.sqrt(2 *0.5 * distance )
+                target_vel = math.sqrt(2 *0.2 * distance )
                 # if we are below 1.0, just go ahead and stop
                 if target_vel < 1.0:
                     target_vel = 0
