@@ -38,6 +38,15 @@ def load_graph(graph_file):
         detection_classes = graph.get_tensor_by_name('detection_classes:0')
     return graph, image_tensor, detection_boxes,detection_scores,detection_classes
 
+def draw_boxes(image, boxes, classes, thickness=4):
+    """Draw bounding boxes on the image"""
+    draw = ImageDraw.Draw(image)
+    for i in range(len(boxes)):
+        bot, left, top, right = boxes[i, ...]
+        class_id = int(classes[i])
+        color = COLOR_LIST[class_id]
+        draw.line([(left, top), (left, bot), (right, bot), (right, top), (left, top)], width=thickness, fill=color)
+
 class TLDetection(object):
     def __init__(self):
         # load params
@@ -102,15 +111,6 @@ class TLDetection(object):
 
         return boxes, scores, classes, times
 
-    def draw_boxes(image, boxes, classes, thickness=4):
-        """Draw bounding boxes on the image"""
-        draw = ImageDraw.Draw(image)
-        for i in range(len(boxes)):
-            bot, left, top, right = boxes[i, ...]
-            class_id = int(classes[i])
-            color = COLOR_LIST[class_id]
-            draw.line([(left, top), (left, bot), (right, bot), (right, top), (left, top)], width=thickness, fill=color)
-
     def detect_traffic_lights(self, image):
         width, height = image.size
         factor = 224.0 / width
@@ -134,7 +134,7 @@ class TLDetection(object):
             if not os.path.exists("./output/"):
                 os.mkdir("/home/student/output/")
             fname = "/home/student/output/{}.png".format(self.img_count)
-            self.draw_boxes(image, boxes, classes)
+            draw_boxes(image, boxes, classes)
             image.save(fname)
             self.img_count = self.img_count + 1
 
