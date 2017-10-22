@@ -137,6 +137,7 @@ class TLDetection(object):
             draw_boxes(image, boxes, classes)
             image.save(fname)
             self.img_count = self.img_count + 1
+            rospy.loginfo("[TLDetection] -> saved image " + fname)
 
         for box in box_coords:
             top,left,bottom,right = box
