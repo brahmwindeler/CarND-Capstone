@@ -59,6 +59,7 @@ class WaypointUpdater(object):
         self.num_base_waypoints = 0 # number of all waypoints of the track
 
         self.red_tl_index       = -1    # Index of the next red traffic light from /traffic_waypoint
+	self.max_vel = rospy.get_param('/waypoint_loader/velocity', 40) * 0.27778
 
         self.loop()
 
@@ -94,8 +95,10 @@ class WaypointUpdater(object):
             # Keep only the closest waypoints (also discard distances used to order waypoints)
             waypoints_ahead = [item[0] for item in waypoints_ahead[:LOOKAHEAD_WPS]]
 
-            # Apply deceleration if there's a traffic light nearby
-            
+	    # limit velocity
+	    for waypoint in waypoints_ahead:
+            	waypoint.twist.twist.linear.x = self.max_vel 
+           # Apply deceleration if there's a traffic light nearby
             if self.red_tl_index > -1:
 
                 relative_tl_index = self.red_tl_index - closest_index
@@ -104,10 +107,9 @@ class WaypointUpdater(object):
                 else:
                     # TODO: might need to do something for acceleration here, too.
                     pass
-            else:
+            #else:
                 # TODO: Implement proper acceleration from stop light
-                for waypoint in waypoints_ahead:
-                    waypoint.twist.twist.linear.x = 20.0  # this is just a placeholder
+
 
             # Create Lane message with list of waypoints ahead
             lane_message = compose_lane_message(self.frame_id, waypoints_ahead)
