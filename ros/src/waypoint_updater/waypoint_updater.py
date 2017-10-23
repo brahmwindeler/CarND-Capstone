@@ -97,19 +97,14 @@ class WaypointUpdater(object):
 
 	    # limit velocity
 	    for waypoint in waypoints_ahead:
-            	waypoint.twist.twist.linear.x = self.max_vel 
-           # Apply deceleration if there's a traffic light nearby
+                waypoint.twist.twist.linear.x = self.max_vel 
+
+            # Apply deceleration if there's a traffic light nearby
             if self.red_tl_index > -1:
 
                 relative_tl_index = self.red_tl_index - closest_index
                 if relative_tl_index < LOOKAHEAD_WPS:
                     waypoints_ahead = self.apply_deceleration(waypoints_ahead, relative_tl_index)
-                else:
-                    # TODO: might need to do something for acceleration here, too.
-                    pass
-            #else:
-                # TODO: Implement proper acceleration from stop light
-
 
             # Create Lane message with list of waypoints ahead
             lane_message = compose_lane_message(self.frame_id, waypoints_ahead)
