@@ -13,8 +13,8 @@ from styx_msgs.msg import TrafficLightArray, TrafficLight
 import tf
 import rospy
 
+# Globals
 CSV_HEADER = ['x', 'y', 'z', 'yaw']
-
 
 class PathPublisher(object):
 
@@ -26,7 +26,7 @@ class PathPublisher(object):
         sub = rospy.Subscriber('/vehicle/traffic_lights', TrafficLightArray, self.traffic_cb)
 
         self.pub_path   = rospy.Publisher('/nav_path', Path, queue_size=1, latch=True)
-        self.pub_lights = rospy.Publisher('/nav_traffic_lights', MarkerArray, queue_size=1, latch=True)
+        self.pub_lights = rospy.Publisher('/nav_traffic_lights', MarkerArray, queue_size=1)
         self.pub_lines  = rospy.Publisher('/nav_stop_lines', MarkerArray, queue_size=1, latch=True)
 
         
@@ -40,7 +40,7 @@ class PathPublisher(object):
         if os.path.isfile(path_file):
             poses = self.load_poses(path_file)
             self.publish(poses)
-            rospy.loginfo('Path Waypoints Loaded: {}'.format(len(poses)))
+            rospy.loginfo('Path Waypoints Published: {}'.format(len(poses)))
         else:
             rospy.logerr('%s is not a file', path_file)
 
@@ -50,12 +50,12 @@ class PathPublisher(object):
         stop_line_positions = self.tl_config['stop_line_positions']
 
         stop_line_markers = []
-        for position in stop_line_positions:
+        for i, position in enumerate(stop_line_positions):
             m = Marker()
             m.header.frame_id = '/world'
             m.header.stamp = rospy.Time(0)
             m.ns = "stop_lines"
-            m.id = 0
+            m.id = i
             m.type = Marker.SPHERE
             m.action = Marker.ADD
             m.pose.position.x = float(position[0])
@@ -65,12 +65,13 @@ class PathPublisher(object):
             m.pose.orientation.y = 0.0
             m.pose.orientation.z = 0.0
             m.pose.orientation.w = 1.0
-            m.scale.x = 1.0
-            m.scale.y = 1.0
-            m.scale.z = 1.0
+            m.scale.x = 3.0
+            m.scale.y = 3.0
+            m.scale.z = 3.0
+            # Color: Orange
             m.color.a = 1.0 # Don't forget to set the alpha!
-            m.color.r = 0.0
-            m.color.g = 1.0
+            m.color.r = 1.0
+            m.color.g = 0.67
             m.color.b = 0.0
             
             stop_line_markers.append(m)
@@ -79,7 +80,7 @@ class PathPublisher(object):
         marker_array.markers = stop_line_markers
 
         self.pub_lines.publish(marker_array)
-        rospy.loginfo('Stop Lines Loaded: {}'.format(len(stop_line_markers)))
+        rospy.loginfo('Stop Lines Published: {}'.format(len(stop_line_markers)))
 
     def quaternion_from_yaw(self, yaw):
         return tf.transformations.quaternion_from_euler(0., 0., yaw)
@@ -109,18 +110,18 @@ class PathPublisher(object):
 
     def traffic_cb(self, msg):
 
-        if self.lights != None:
-            return
+        #if self.lights != None:
+            #return
 
         self.lights = msg.lights
 
         tl_markers = []
-        for tl in self.lights:
+        for i,tl in enumerate(self.lights):
             m = Marker()
             m.header.frame_id = '/world'
             m.header.stamp = rospy.Time(0)
             m.ns = "traffic_lights"
-            m.id = 0
+            m.id = i
             m.type = Marker.SPHERE
             m.action = Marker.ADD
             m.pose.position.x = tl.pose.pose.position.x
@@ -130,13 +131,32 @@ class PathPublisher(object):
             m.pose.orientation.y = 0.0
             m.pose.orientation.z = 0.0
             m.pose.orientation.w = 1.0
-            m.scale.x = 1.0
-            m.scale.y = 1.0
-            m.scale.z = 1.0
+            m.scale.x = 4.0
+            m.scale.y = 4.0
+            m.scale.z = 4.0
             m.color.a = 1.0 # Don't forget to set the alpha!
-            m.color.r = 0.0
-            m.color.g = 1.0
-            m.color.b = 0.0
+            if tl.state is not None:
+                if tl.state == TrafficLight.RED:
+                    m.color.r = 1.0
+                    m.color.g = 0.0
+                    m.color.b = 0.0
+                elif tl.state == TrafficLight.YELLOW:
+                    m.color.r = 1.0
+                    m.color.g = 1.0
+                    m.color.b = 0.0
+                elif tl.state == TrafficLight.GREEN:
+                    m.color.r = 0.0
+                    m.color.g = 1.0
+                    m.color.b = 0.0
+                else:
+                    # Grey
+                    m.color.r = 0.5
+                    m.color.g = 0.5
+                    m.color.b = 0.5
+            else:
+                m.color.r = 0.5
+                m.color.g = 0.5
+                m.color.b = 0.5
             
             tl_markers.append(m)
 
@@ -144,7 +164,7 @@ class PathPublisher(object):
         marker_array.markers = tl_markers
 
         self.pub_lights.publish(marker_array)
-        rospy.loginfo('Traffic Lights Loaded: {}'.format(len(tl_markers)))
+        rospy.loginfo('Traffic Lights Published: {}'.format(len(tl_markers)))
 
 if __name__ == '__main__':
     try:
