@@ -34,7 +34,7 @@ LOOKAHEAD_WPS = 200  # Number of waypoints we will publish in /final_waypoints.
 class WaypointUpdater(object):
     def __init__(self):
 
-        rospy.init_node('waypoint_updater')
+        rospy.init_node('waypoint_updater', log_level=rospy.INFO)
 
         # Used to determine which waypoints lie ahead of the car
         rospy.Subscriber('/current_pose', PoseStamped, self.pose_callback)
@@ -120,7 +120,7 @@ class WaypointUpdater(object):
                 if len(waypoints_ahead) > 0:
                     print_waypoint(waypoints_ahead[0], msg='Next waypoint: ')
                 else:
-                    print('No waypoints_ahead!')
+                    rospy.logdebug('No waypoints_ahead!')
 
             # Sleep if necessary to maintain the desired processing rate
             rate.sleep()
@@ -137,7 +137,7 @@ class WaypointUpdater(object):
         Store the list of all waypoints.
         Notice that publisher for `/base_waypoints` publishes only once.
         """
-        print('waypoint_updater: p_tl: BASE WAYPOINTS UPDATES')
+        rospy.logdebug('waypoint_updater: p_tl: BASE WAYPOINTS UPDATES')
         self.base_waypoints = waypoints.waypoints
         self.num_base_waypoints = len(self.base_waypoints)
 
@@ -157,66 +157,64 @@ class WaypointUpdater(object):
 
     def apply_deceleration(self, waypoints, tl_index):
         """
-            This function takes in a set of waypoints and the index value of the traffic light waypoint.
-            The return of this method is an updated list of waypoints.
+        This function takes in a set of waypoints and the index value of the traffic light waypoint.
+        The return of this method is an updated list of waypoints.
         """
-        # if we are already over the white line, keep going. 
+
+        # If we are already over the white line, keep going.
         if tl_index < 0:
-            if VERBOSE:
-                rospy.logerr("Traffic light too close to stop safely")
+            rospy.logwarn("Traffic light too close to stop safely!")
             return waypoints
                     
-        # if tl_index < 2:
-        #     
-        #     return waypoints
-        # get the waypoint for the traffic light and then subtract 30 because the light is at the other side of the intersection and we stop at the white line
+        # Adjust our stopping waypoint index to be a little behind the line
         stopping_index = tl_index - 2
-        if VERBOSE:
-            rospy.logerr('target index to stop at: ' +  str(int(stopping_index)))
+
+        rospy.loginfo('Target index to stop at: ' +  str(int(stopping_index)))
 
         last_wp = waypoints[stopping_index]
         last_wp.twist.twist.linear.x = 0.0
 
-        # iterate the list of waypoints and set a velocity to slow us down
+        # Iterate the list of waypoints and set a velocity to slow us down
         for index, waypoint in enumerate(waypoints[:]):
+
             if index <= stopping_index:
-                distance = self.get_distance_2_points(waypoint.pose.pose.position, last_wp.pose.pose.position)
-                distance = max(0, distance)
-                target_vel = math.sqrt(2 *.2 * distance )
+
+                distance = max(0.0, self.get_distance_2_points(waypoint.pose.pose.position, last_wp.pose.pose.position))
+                target_vel = math.sqrt(2.0 *.2 * distance)
+
                 # if we are below 1.0, just go ahead and stop
                 if target_vel < 1.0:                        
-                    target_vel = 0
-                # if VERBOSE:
-                #     rospy.logerr("target_vel is: " + str(float(target_vel)))
+                    target_vel = 0.0
+
+                rospy.logdebug("target_vel is: " + str(float(target_vel)))
+
                 # update the individual waypoints
-                # waypoint.twist.twist.linear.x = min(target_vel, waypoint.twist.twist.linear.x)
                 waypoint.twist.twist.linear.x = min(target_vel, waypoint.twist.twist.linear.x)
+
             else:
                 # every waypoint past the target stopping ppoint should be set to 0.
-                waypoint.twist.twist.linear.x =  0
-
-
+                waypoint.twist.twist.linear.x =  0.0
 
         return waypoints
-
 
     def publish_car_path(self, waypoints):
         path = Marker()
         path.header.frame_id = self.frame_id
         path.header.stamp = rospy.Time.now()
-        path.ns = "path"
+        path.ns = "planned_path"
         path.id = 0
         path.action = Marker.ADD
         path.type = Marker.LINE_LIST
         path.scale.x = 0.1
+        path.color.a = 1.0
         path.color.r = 1.0
-        path.color.a = 0.5
+        path.color.g = 0.0
+        path.color.b = 0.0
         path.points = []
         for waypoint in waypoints:
             position = copy.deepcopy(waypoint.pose.pose.position)
             path.points.append(position)
             position = copy.deepcopy(position)
-            #position.z = 0.1 # height
             position.z = self.get_waypoint_velocity(waypoint)
             path.points.append(position)
         self.pub_car_path.publish(path)
@@ -225,12 +223,22 @@ class WaypointUpdater(object):
         next_wp = copy.deepcopy(waypoint.pose)
         next_wp.header.frame_id = self.frame_id
         next_wp.header.stamp = rospy.Time.now()
+        # Greenish blue
+        #next_wp.color.a = 1.0
+        #next_wp.color.r = 0.0
+        #next_wp.color.g = 0.33
+        #next_wp.color.b = 1.0
         self.pub_next_wp.publish(next_wp)
 
     def publish_next_tl_wp(self, waypoint):
         next_tl = copy.deepcopy(waypoint.pose)
         next_tl.header.frame_id = self.frame_id
         next_tl.header.stamp = rospy.Time.now()
+        # Transparent white
+        #next_tl.color.a = 0.5
+        #next_tl.color.r = 1.0
+        #next_tl.color.g = 1.0
+        #next_tl.color.b = 1.0
         self.pub_next_tl.publish(next_tl)
 
     def obstacle_cb(self, msg):
