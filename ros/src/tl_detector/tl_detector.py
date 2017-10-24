@@ -75,7 +75,7 @@ class TLDetector(object):
         # Data file to store the image name and light state in the image.
         self.datafile = open(self.dump_images_dir + "/lightsData.csv", "w+")
 
-        self.lightState = None
+        self.light_color = None
 
         if not PREFER_GROUND_TRUTH:
             # Create tensorflow session
@@ -103,10 +103,10 @@ class TLDetector(object):
 
             # Dump image to dump directory
             cv2.imwrite(image_path, image_data)
-            
+
             # write the state of the light and the image name to a csv file
             print("Writing to datafile")
-            self.datafile.write('{:06d}.jpg'.format(self.dump_images_counter) + " , " +  self.lightState + "\n")  
+            self.datafile.write('{:06d}.jpg'.format(self.dump_images_counter) + " , " +  self.light_color + "\n")
             # Update counter and timestamp
             self.dump_images_counter += 1
             self.last_dump_tstamp = rospy.get_time()
@@ -131,8 +131,6 @@ class TLDetector(object):
         self.has_image = True
         self.camera_image = msg
         light_wp, state = self.process_traffic_lights()
-
-        
 
         '''
         Publish upcoming red lights at camera frequency.
@@ -160,7 +158,7 @@ class TLDetector(object):
 
         Returns:
             int: index of the closest waypoint in self.waypoints       """
-       
+
         if self.waypoints is not None and self.kdtree is None:
             if VERBOSE:
                 print ('tl_detector: g_cl_wp: initializing kdtree')
@@ -208,7 +206,7 @@ class TLDetector(object):
         return light_state
 
 
-    def createLine(self, x, y, z):
+    def create_stop_line_pose(self, x, y, z):
         """takes in 3 positions and generates a traffic light object.
         Hijacked the light object and used it for a line to save time creating code
         """
@@ -219,25 +217,27 @@ class TLDetector(object):
         line.pose.pose.position.z = z
         return line
 
-    def get_closest_index(self, waypoint, waypoint_list):
-
+    def get_closest_index(self, waypoint_idx, waypoint_list):
         """
-        takes in a targetwaypoint and a list of points.
+        takes in the target waypoint index and a list of points.
         returns the index of the waypoint in the list closest to the target waypoint
         """
-        min_distance = 25 # drove the car around in manual, none of the distances for the lines were more than 25 away.
-        index = 0c
-        target = self.waypoints[waypoint]
-        # rospy.logerr(str(pose))
-        for i, point in enumerate(waypoint_list):
+        target = self.waypoints[waypoint_idx]
+
+        min_distance = float("Infinity") # drove the car around in manual, none of the distances for the lines were more than 25 away.
+
+        for i, candidate in enumerate(waypoint_list):
+
             #rospy.logerr("iteration # " + str(int(i)))
-            distance = math.sqrt((point.pose.pose.position.x - target.pose.pose.position.x)**2 + (point.pose.pose.position.y - target.pose.pose.position.y)**2)
+            #distance = (candidate.pose.pose.position.x - target.pose.pose.position.x)**2 + (candidate.pose.pose.position.y - target.pose.pose.position.y)**2
+            distance = get_simple_distance_from_waypoint(candidate, target.pose.pose)
+
             if distance < min_distance:
                 #rospy.logerr("distance = " +str(float(distance)))
+                min_distance = distance
                 index = i
+
         return index
-
-
 
     def process_traffic_lights(self):
         """Finds closest visible traffic light, if one exists, and determines its
@@ -275,9 +275,10 @@ class TLDetector(object):
 
         # If we found a light ahead of us
         if light:
-            self.lightState = self._light_color(light.state)
-            config_string = rospy.get_param("/traffic_light_config")
-            self.config = yaml.load(config_string)
+
+            # Convert the light state to a human readible string
+            self.light_color = self._light_color(light.state)
+
             # Calculate the actual distance the of the light.
             light_distance = math.sqrt(min_distance)
 
@@ -286,23 +287,28 @@ class TLDetector(object):
                     (self.pose.pose.position.x, self.pose.pose.position.y),
                     (light.pose.pose.position.x, light.pose.pose.position.y),
                     light_distance))
-            line_list = []
-            for line_position in stop_line_positions:
-                line = self.createLine(line_position[0], line_position[1], 0.0)
-                line_list.append(line)
-            # rospy.logerr("List of Lines : " + str(line_list))
+
+            # Convert the stop line positions to posestamped objects
+            stop_line_list = []
+            for stop_line_position in stop_line_positions:
+                stop_line_pose = self.create_stop_line_pose(stop_line_position[0], stop_line_position[1], 0.0)
+                stop_line_list.append(stop_line_pose)
+
+            # rospy.logerr("List of Lines : " + str(stop_line_list))
             # Look up the closest waypoint to it
             # TODO: [brahm] Can we assume self.kdtree is initialized?
 
-            # Changing this to give us the closest stop line to the light instead of the light itself
-            # first we get the waypoint closest to the light
-            light_wp = self.get_closest_waypoint(light.pose.pose)
-            
-            # once we have the light waypoint, use the same method to get the closest line
-            line_index = self.get_closest_index(light_wp, line_list)
-            # now that we have the line wp from the list, we need to get the closes waypoint from our list
-            
-            light_wp = self.get_closest_waypoint(line_list[line_index].pose.pose )
+            # Instead of returning the index of the closest traffic light,
+            # we will return the index of the closest stop line to the light
+
+            # First we get the waypoint closest to the light
+            light_wp_idx = self.get_closest_waypoint(light.pose.pose)
+
+            # Once we have the light waypoint index, use the same method to get the index of the closest stop line
+            line_index = self.get_closest_index(light_wp_idx, stop_line_list)
+
+            # Now that we have the stop line index from the list, we need to get the closest waypoint from our list
+            light_wp_idx = self.get_closest_waypoint(stop_line_list[line_index].pose.pose)
 
             # Determine the state of the light
             state = -1
@@ -325,15 +331,12 @@ class TLDetector(object):
                 if VERBOSE:
                     print ("tl_detector: p_tl: light is close: {} meters away.".format(light_distance))
 
-            return light_wp, state
+            return light_wp_idx, state
 
         self.waypoints = None
         return -1, TrafficLight.UNKNOWN
 
-
-
-
-    # Helper 
+    # Helper
     def _light_color(self, state):
         if (state == TrafficLight.RED):
             return "RED"
