@@ -106,7 +106,7 @@ class TrafficLightClassifier:
 
         labels = ['NO SEMAPHORE', 'RED', 'YELLOW', 'GREEN']
 
-        print(labels[pred_idx])
+        # print(labels[pred_idx])
 
         if labels[pred_idx] == 'NO SEMAPHORE':
             return TrafficLight.UNKNOWN

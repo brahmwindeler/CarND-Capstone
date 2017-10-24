@@ -67,9 +67,9 @@ class Controller(object):
         target_angular_velocity = args[1]
         current_linear_velocity = args[2]
         is_dbw_enabled = args[3]
-		# set maximum velocity
-		if (target_linear_velocity > MAX_VEL):
-			target_linear_velocity = MAX_VEL
+        # set maximum velocity
+        if target_linear_velocity > MAX_VEL:
+            target_linear_velocity = MAX_VEL
 
         # If DBW isn't currently enabled but we need to enable it
         if is_dbw_enabled:
