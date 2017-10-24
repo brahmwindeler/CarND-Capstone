@@ -92,7 +92,6 @@ class WaypointUpdater(object):
             # Save the closest index
             closest_index = waypoints_ahead[0][2]
 
-
             # Keep only the closest waypoints (also discard distances used to order waypoints)
             waypoints_ahead = [item[0] for item in waypoints_ahead[:LOOKAHEAD_WPS]]
 
@@ -102,19 +101,10 @@ class WaypointUpdater(object):
 
             # Apply deceleration if there's a traffic light nearby
             if self.red_tl_index > -1:
+
                 relative_tl_index = self.red_tl_index - closest_index
                 if relative_tl_index < LOOKAHEAD_WPS:
                     waypoints_ahead = self.apply_deceleration(waypoints_ahead, relative_tl_index)
-
-                else:
-                    # TODO: might need to do something for acceleration here, too.
-                    pass
-            else:
-                # TODO: Implement proper acceleration from stop light
-                for waypoint in waypoints_ahead:
-                    waypoint.twist.twist.linear.x = 10.0 # this is just a placeholder
-
-
 
             # Create Lane message with list of waypoints ahead
             lane_message = compose_lane_message(self.frame_id, waypoints_ahead)
@@ -188,7 +178,7 @@ class WaypointUpdater(object):
         last_wp.twist.twist.linear.x = 0.0
 
         # iterate the list of waypoints and set a velocity to slow us down
-        for index, waypoint in enumerate(waypoints[:-1]):
+        for index, waypoint in enumerate(waypoints[:]):
             if index <= stopping_index:
                 distance = self.get_distance_2_points(waypoint.pose.pose.position, last_wp.pose.pose.position)
                 distance = max(0, distance)
@@ -226,7 +216,8 @@ class WaypointUpdater(object):
             position = copy.deepcopy(waypoint.pose.pose.position)
             path.points.append(position)
             position = copy.deepcopy(position)
-            position.z = 0.1 # height
+            #position.z = 0.1 # height
+            position.z = self.get_waypoint_velocity(waypoint)
             path.points.append(position)
         self.pub_car_path.publish(path)
 
