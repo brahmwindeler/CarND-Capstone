@@ -24,4 +24,7 @@
     <!--Global to Map used for rviz -->
     <include file="../data/maptf.launch"/>
 
+    <!--Traffic Light Detector Node -->
+    <include file="$(find path_publisher)/launch/path_publisher.launch"/>
+
 </launch>
