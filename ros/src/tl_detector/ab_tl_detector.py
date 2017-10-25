@@ -13,16 +13,14 @@ from styx_msgs.msg import TrafficLightArray, TrafficLight
 from styx_msgs.msg import Lane
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
+from light_classification.traffic_light_classifier import TrafficLightClassifier
 from tl_helper import create_dir_if_nonexistent
 from os.path import expanduser, join, exists
 from kdtree import KDTree
 from waypoint_helper import is_ahead
 from waypoint_helper import get_simple_distance_from_waypoint
 
-from ab_tl_classify.tl_classifier import TLClassifier
-from ab_tl_detect.tl_detection import TLDetection
-import PIL
-
+# GLOBALS
 STATE_COUNT_THRESHOLD = 3
 TL_NEARNESS_THRESHOLD = 150
 VERBOSE = False
@@ -78,7 +76,7 @@ class TLDetector(object):
         # Data file to store the image name and light state in the image.
         self.datafile = open(self.dump_images_dir + "/lightsData.csv", "w+")
 
-        self.lightState = None
+        self.light_color = None
 
         if not PREFER_GROUND_TRUTH:
             # Create tensorflow session
@@ -110,8 +108,8 @@ class TLDetector(object):
             cv2.imwrite(image_path, image_data)
 
             # write the state of the light and the image name to a csv file
-            print("Writing to datafile")
-            self.datafile.write('{:06d}.jpg'.format(self.dump_images_counter) + " , " +  self.lightState + "\n")
+            rospy.logdebug("Writing to datafile")
+            self.datafile.write('{:06d}.jpg'.format(self.dump_images_counter) + " , " +  self.light_color + "\n")
             # Update counter and timestamp
             self.dump_images_counter += 1
             self.last_dump_tstamp = rospy.get_time()
@@ -168,8 +166,9 @@ class TLDetector(object):
         """
 
         if self.waypoints is not None and self.kdtree is None:
-            if VERBOSE:
-                print ('tl_detector: g_cl_wp: initializing kdtree')
+
+            rospy.logdebug('tl_detector: g_cl_wp: initializing kdtree')
+
             points = []
 
             for i, waypoint in enumerate(self.waypoints):
@@ -182,12 +181,12 @@ class TLDetector(object):
         if self.kdtree is not None:
             current_position = (pose.position.x, pose.position.y)
             closest = self.kdtree.closest_point(current_position)
-            if VERBOSE:
 
-                print ('tl_detector: g_cl_wp: closest point to {} is {}'.format(current_position, closest))
+            rospy.logdebug('tl_detector: g_cl_wp: closest point to {} is {}'.format(current_position, closest))
+
             return closest[2]
 
-        return 0
+        return -1
 
     def get_light_state(self, light):
         """Determines the current color of the traffic light
@@ -199,9 +198,7 @@ class TLDetector(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
-        result = TrafficLight.UNKNOWN
-
-        if (not self.has_image):
+        if not self.has_image:
             self.prev_light_loc = None
             return False
 
@@ -224,11 +221,11 @@ class TLDetector(object):
         # Detect traffic lights
         traffic_lights = self.traffic_light_detector.detect_traffic_lights(image)
 
-        if (len(traffic_lights) > 0):
-            # Classify detected traffic lights
-            result = self.light_classifier.get_classification(traffic_lights)
+        if (len(traffic_lights) == 0):
+            return TrafficLight.UNKNOWN
 
-        return result
+        # Classify detected traffic lights
+        return self.light_classifier.get_classification(traffic_lights)
 
     def process_traffic_lights(self):
         """Finds closest visible traffic light, if one exists, and determines its
