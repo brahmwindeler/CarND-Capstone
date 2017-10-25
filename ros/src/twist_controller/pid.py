@@ -54,41 +54,42 @@ class PID(object):
     def twiddle(self, cte):
         tol = 0.2
         dp = [1,1,1]
-        p = [0,0,0 ]
-        rospy.loginfo("Initial Error: " + str(float(cte)))     
+        p = [self.kp, self.ki, self.kd ]
+        rospy.logwarn("Initial Error: " + str(float(cte)))     
 
         best_error = cte
-        rospy.loginfo("beginning twiddle")
-        rospy.loginfo("Starting dp = " + str(float(dp[0]))+ "  " + str(float(dp[1]))+ "  " +str(float(dp[2])))
+        rospy.logwarn("beginning twiddle")
+        rospy.logwarn("Starting dp = " + str(float(dp[0]))+ "  " + str(float(dp[1]))+ "  " +str(float(dp[2])))
         while sum(dp) > tol:            
             for i in range(len(p)):
+                # in case we cannot get a better value, this will hold the original 
+                originalValue = p[i] 
                 p[i] += dp[i]
-                # in case we cannot get a better value, this will hold the original                
                 error = self.total_error(p)
                 if error < best_error:
-                    rospy.loginfo("error is less")
-                    rospy.loginfo("error = " + str(float(cte)))
+                    rospy.logwarn("error is less")
+                    rospy.logwarn("error = " + str(float(cte)))
                     best_error = error
                     dp[i] *= 1.1
                 else:
-                    rospy.loginfo("error is more")
-                    rospy.loginfo("error = " + str(float(cte)))
+                    rospy.logwarn("error is more")
+                    rospy.logwarn("error = " + str(float(cte)))
                     p[i] -= 2 * dp[i]
                     error = self.total_error(p)
 
                     if error < best_error:
-                        rospy.loginfo("embedded if")
-                        rospy.loginfo("error = " + str(float(cte)))
+                        rospy.logwarn("embedded if")
+                        rospy.logwarn("error = " + str(float(cte)))
                         best_error = error
                         dp[i] *= 1.1
                     else:
-                        rospy.loginfo("embedded else")
-                        rospy.loginfo("error = " + str(float(cte)))
-                        p[i] += dp[i]
+                        rospy.logwarn("embedded else")
+                        rospy.logwarn("error = " + str(float(cte)))
+                        p[i] = originalValue # += dp[i]
                         dp[i] *= .09
 
-                rospy.loginfo("dp = " + str(float(dp[0]))+ "  " + str(float(dp[1]))+ "  " +str(float(dp[2])))
-        rospy.loginfo("kp = " + str(dp[0]) + " ki = " + str(dp[1]) + " kd = " + str(dp[2]) )
+                rospy.logwarn("dp = " + str(float(dp[0]))+ "  " + str(float(dp[1]))+ "  " +str(float(dp[2])))
+        rospy.logwarn("kp = " + str(dp[0]) + " ki = " + str(dp[1]) + " kd = " + str(dp[2]) )
         return p[0], p[1], p[2]
 
     def updateError(self, cte):

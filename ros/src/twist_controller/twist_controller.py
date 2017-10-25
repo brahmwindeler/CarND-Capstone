@@ -84,8 +84,8 @@ class Controller(object):
         # Calculate the velocity cross train error (CTE)
         velocity_cte = target_linear_velocity - current_linear_velocity
 
-        #twiddle to get the best parameters.
-        #self.pid_vel.updateError(velocity_cte)
+        # twiddle to get the best parameters.
+        # self.pid_vel.updateError(velocity_cte)
 
         # Get the throttle adjustment for the time step via the PID controller
         elapsed_time = self.calculate_elapsed_time()

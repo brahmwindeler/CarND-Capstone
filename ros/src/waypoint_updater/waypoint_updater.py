@@ -167,7 +167,8 @@ class WaypointUpdater(object):
             return waypoints
                     
         # Adjust our stopping waypoint index to be a little behind the line
-        stopping_index = tl_index - 2
+        stopping_index = tl_index - 5
+        # rospy.logwarn("Beginning deceleration")
 
         rospy.loginfo('Target index to stop at: ' +  str(int(stopping_index)))
 
@@ -177,7 +178,7 @@ class WaypointUpdater(object):
         # Iterate the list of waypoints and set a velocity to slow us down
         for index, waypoint in enumerate(waypoints[:]):
 
-            if index <= stopping_index:
+            if index < stopping_index:
 
                 distance = max(0.0, self.get_distance_2_points(waypoint.pose.pose.position, last_wp.pose.pose.position))
                 target_vel = math.sqrt(2.0 *.2 * distance)
