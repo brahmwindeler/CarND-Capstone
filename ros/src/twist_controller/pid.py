@@ -55,15 +55,15 @@ class PID(object):
         tol = 0.2
         dp = [1,1,1]
         p = [self.kp, self.ki, self.kd ]
-        rospy.logwarn("Initial Error: " + str(float(cte)))     
+        rospy.logwarn("Initial Error: " + str(float(cte)))
 
         best_error = cte
         rospy.logwarn("beginning twiddle")
         rospy.logwarn("Starting dp = " + str(float(dp[0]))+ "  " + str(float(dp[1]))+ "  " +str(float(dp[2])))
         while sum(dp) > tol:            
             for i in range(len(p)):
-                # in case we cannot get a better value, this will hold the original 
-                originalValue = p[i] 
+                # in case we cannot get a better value, this will hold the original
+                originalValue = p[i]
                 p[i] += dp[i]
                 error = self.total_error(p)
                 if error < best_error:
@@ -86,7 +86,7 @@ class PID(object):
                         rospy.logwarn("embedded else")
                         rospy.logwarn("error = " + str(float(cte)))
                         p[i] = originalValue # += dp[i]
-                        dp[i] *= .09
+                        dp[i] *= 0.9
 
                 rospy.logwarn("dp = " + str(float(dp[0]))+ "  " + str(float(dp[1]))+ "  " +str(float(dp[2])))
         rospy.logwarn("kp = " + str(dp[0]) + " ki = " + str(dp[1]) + " kd = " + str(dp[2]) )
