@@ -23,7 +23,7 @@ from waypoint_helper import get_simple_distance_from_waypoint
 # GLOBALS
 STATE_COUNT_THRESHOLD = 3
 TL_NEARNESS_THRESHOLD = 150
-PREFER_GROUND_TRUTH = True
+PREFER_GROUND_TRUTH = False
 
 class TLDetector(object):
     def __init__(self):
@@ -196,7 +196,9 @@ class TLDetector(object):
 
         cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
 
+        #start_time = rospy.get_time()
         light_state = self.light_classifier.get_classification(self.session, cv_image)
+        #rospy.loginfo("get_light_state: classification elapsed time: {}, state: {}".format(rospy.get_time() - start_time, self._light_color(light_state)))
 
         return light_state
 
@@ -327,7 +329,7 @@ class TLDetector(object):
 
             # If we don't know the state of the light yet, attempt to classify it
             if state == -1:
-                state_inferred = self.get_light_state(light)
+                state = self.get_light_state(light)
 
             # If the traffic light is close, let us know
             if (light_distance < TL_NEARNESS_THRESHOLD):
