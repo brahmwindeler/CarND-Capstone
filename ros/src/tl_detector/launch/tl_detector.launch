@@ -2,7 +2,7 @@
 <launch>
     <node pkg="tl_detector" type="tl_detector.py" name="tl_detector" output="screen" cwd="node"/>
     <rosparam param="tl_PREFER_GROUND_TRUTH">False</rosparam>
-    <rosparam param="tl_detection_method">ab2005</rosparam>
+    <rosparam param="tl_detection_method">minotauro</rosparam>
     <rosparam param="tl_classes">['red', 'off', 'green', 'yellow', 'unknown']</rosparam>
     <rosparam param="tl_values">[0, 4, 2, 1, 4]</rosparam>
     <rosparam param="tl_weights_file">./ab_tl_classify/include/weights/checkpoint-78-0.03.h5</rosparam>
