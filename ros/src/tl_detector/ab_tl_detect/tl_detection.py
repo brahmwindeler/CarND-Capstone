@@ -58,7 +58,7 @@ class TLDetection(object):
         # load params
         self.model_path= os.path.join(MODELS_DIR,'ssd_mobilenet_v1_coco_11_06_2017','frozen_inference_graph.pb')
         self.detection_graph,self.image_tensor, self.detection_boxes,self.detection_scores,self.detection_classes = load_graph(self.model_path)
-        self.log_output = True #rospy.get_param("~tl_write_output")
+        self.log_output = False #rospy.get_param("~tl_write_output")
         rospy.loginfo("[TL Detection] -> Model loaded!")
         self.sess = tf.Session(graph=self.detection_graph)
         self.img_count = 0
@@ -138,7 +138,8 @@ class TLDetection(object):
 
         if (self.log_output):
             if not os.path.exists("./output/"):
-                os.mkdir("/home/student/output/")
+                if not os.path.exists("/home/student/output/"):
+                    os.mkdir("/home/student/output/")
             fname = "/home/student/output/{}.png".format(self.img_count)
             draw_boxes(image, boxes, classes)
             image.save(fname)

@@ -225,7 +225,14 @@ class TLDetector(object):
             return TrafficLight.UNKNOWN
 
         # Classify detected traffic lights
-        return self.light_classifier.get_classification(traffic_lights)
+
+        #start_time = rospy.get_time()
+        light_state = self.light_classifier.get_classification(traffic_lights)
+        #rospy.loginfo("get_light_state: classification elapsed time: {}, state: {}".format(rospy.get_time() - start_time, self._light_color(light_state)))
+        if light_state != TrafficLight.UNKNOWN:
+            rospy.loginfo("Traffic light detected. Color: {}".format(self._light_color(light_state)))
+
+        return light_state
 
     def create_stop_line_pose(self, x, y, z):
         """takes in 3 positions and generates a traffic light object.
@@ -353,7 +360,7 @@ class TLDetector(object):
 
             # If we don't know the state of the light yet, attempt to classify it
             if state == -1:
-                state_inferred = self.get_light_state(light)
+                state = self.get_light_state(light)
 
             # If the traffic light is close, let us know
             if (light_distance < TL_NEARNESS_THRESHOLD):

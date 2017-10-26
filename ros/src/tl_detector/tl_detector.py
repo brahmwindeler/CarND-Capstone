@@ -20,10 +20,13 @@ from kdtree import KDTree
 from waypoint_helper import is_ahead
 from waypoint_helper import get_simple_distance_from_waypoint
 
+from ab_tl_classify.tl_classifier import TLClassifier
+from ab_tl_detect.tl_detection import TLDetection
+import PIL
+
 # GLOBALS
 STATE_COUNT_THRESHOLD = 3
 TL_NEARNESS_THRESHOLD = 150
-PREFER_GROUND_TRUTH = False
 
 class TLDetector(object):
     def __init__(self):
@@ -33,6 +36,20 @@ class TLDetector(object):
         self.waypoints = None
         self.camera_image = None
         self.lights = []
+
+        #param_names = rospy.get_param_names()
+        #rospy.loginfo("param_names: {}".format(param_names))
+
+        self.PREFER_GROUND_TRUTH = rospy.get_param('/tl_PREFER_GROUND_TRUTH', False)
+
+        # possible values: minotauro, ab2005
+        self.detection_method = rospy.get_param('/tl_detection_method', 'minotauro')
+
+        rospy.loginfo("Detection method: {}".format(self.detection_method))
+        rospy.loginfo("Prefer ground truth? {}".format("True" if self.PREFER_GROUND_TRUTH else "False"))
+
+        if self.detection_method == 'ab2005':
+            self._models_initialized = False
 
         sub1 = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         sub2 = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
@@ -75,13 +92,19 @@ class TLDetector(object):
 
         self.light_color = None
 
-        if not PREFER_GROUND_TRUTH:
+        if not self.PREFER_GROUND_TRUTH:
             # Create tensorflow session
             self.session = tensorflow.Session()
 
-            # Import classifier and restore pre-trained weights
-            self.light_classifier = TrafficLightClassifier(input_shape=[64, 64], learning_rate=1e-4)
-            tensorflow.train.Saver().restore(self.session, TrafficLightClassifier.checkpoint_path)
+            # Initialize models
+            if self.detection_method == 'ab2005':
+                self.traffic_light_detector = TLDetection()
+                self.light_classifier = TLClassifier()
+                self._models_initialized = True
+            else:
+                # Import classifier and restore pre-trained weights
+                self.light_classifier = TrafficLightClassifier(input_shape=[64, 64], learning_rate=1e-4)
+                tensorflow.train.Saver().restore(self.session, TrafficLightClassifier.checkpoint_path)
 
         rospy.spin()
 
@@ -194,16 +217,50 @@ class TLDetector(object):
             self.prev_light_loc = None
             return False
 
-        cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
+        light_state = TrafficLight.UNKNOWN
 
-        #start_time = rospy.get_time()
-        light_state = self.light_classifier.get_classification(self.session, cv_image)
-        #rospy.loginfo("get_light_state: classification elapsed time: {}, state: {}".format(rospy.get_time() - start_time, self._light_color(light_state)))
+        if self.detection_method == 'ab2005':
+
+            # Don't move until all systems are online
+            if (not self._models_initialized):
+                return TrafficLight.RED
+
+            # Fix camera encoding to match model (from BGR to RGB)
+            if hasattr(self.camera_image, 'encoding'):
+                self.attribute = self.camera_image.encoding
+                if self.camera_image.encoding == '8UC3':
+                    self.camera_image.encoding = "rgb8"
+            else:
+                self.camera_image.encoding = 'rgb8'
+
+            cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "rgb8")
+
+            image = PIL.Image.fromarray(cv_image)
+
+            # Detect traffic lights
+            traffic_lights = self.traffic_light_detector.detect_traffic_lights(image)
+
+            if len(traffic_lights) == 0:
+                return TrafficLight.UNKNOWN
+
+            # Classify detected traffic lights
+
+            #start_time = rospy.get_time()
+            light_state = self.light_classifier.get_classification(traffic_lights)
+            #rospy.loginfo("get_light_state: classification elapsed time: {}, state: {}".format(rospy.get_time() - start_time, self._light_color(light_state)))
+
+        else:
+
+            cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
+
+            #start_time = rospy.get_time()
+            light_state = self.light_classifier.get_classification(self.session, cv_image)
+            #rospy.loginfo("get_light_state: classification elapsed time: {}, state: {}".format(rospy.get_time() - start_time, self._light_color(light_state)))
+
         if light_state != TrafficLight.UNKNOWN:
             rospy.loginfo("Traffic light detected. Color: {}".format(self._light_color(light_state)))
 
         return light_state
-
 
     def create_stop_line_pose(self, x, y, z):
         """takes in 3 positions and generates a traffic light object.
@@ -321,7 +378,7 @@ class TLDetector(object):
 
             # Determine the state of the light
             state = -1
-            if PREFER_GROUND_TRUTH:
+            if self.PREFER_GROUND_TRUTH:
 
                 rospy.logdebug("tl_detector: p_tl: Ground truth light color: {}".format(self._light_color(light.state)))
 
