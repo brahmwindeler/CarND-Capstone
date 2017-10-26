@@ -199,6 +199,8 @@ class TLDetector(object):
         #start_time = rospy.get_time()
         light_state = self.light_classifier.get_classification(self.session, cv_image)
         #rospy.loginfo("get_light_state: classification elapsed time: {}, state: {}".format(rospy.get_time() - start_time, self._light_color(light_state)))
+        if light_state != TrafficLight.UNKNOWN:
+            rospy.loginfo("Traffic light detected. Color: {}".format(self._light_color(light_state)))
 
         return light_state
 
