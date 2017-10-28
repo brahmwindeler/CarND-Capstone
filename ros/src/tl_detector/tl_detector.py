@@ -153,7 +153,7 @@ class TLDetector(object):
         # Throttle image processing because of slow detection
         if self.detection_method == 'ab2005':
             self.ignore_count += 1
-            if self.ignore_count % 3 != 0:
+            if self.ignore_count % 4 != 0:
                 return
 
         self.has_image = True
