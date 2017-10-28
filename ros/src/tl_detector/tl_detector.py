@@ -25,7 +25,7 @@ from ab_tl_detect.tl_detection import TLDetection
 import PIL
 
 # GLOBALS
-STATE_COUNT_THRESHOLD = 3
+STATE_COUNT_THRESHOLD = 1
 TL_NEARNESS_THRESHOLD = 150
 
 class TLDetector(object):
@@ -153,7 +153,7 @@ class TLDetector(object):
         # Throttle image processing because of slow detection
         if self.detection_method == 'ab2005':
             self.ignore_count += 1
-            if self.ignore_count % 4 != 0:
+            if self.ignore_count % 3 != 0:
                 return
 
         self.has_image = True
@@ -166,6 +166,26 @@ class TLDetector(object):
         of times till we start using it. Otherwise the previous stable state is
         used.
         '''
+        if self.detection_method == 'ab2005':
+            if self.state != state:
+                self.state_count = 0
+                self.state = state
+            elif self.state_count >= STATE_COUNT_THRESHOLD:
+                self.last_state = self.state
+                if state == TrafficLight.RED or state == TrafficLight.YELLOW:
+                    light_wp = light_wp
+                elif state == TrafficLight.GREEN:
+                    light_wp = -light_wp
+                else:
+                    light_wp = 1000000
+
+                self.last_wp = light_wp
+                self.upcoming_red_light_pub.publish(Int32(light_wp))
+            else:
+                self.upcoming_red_light_pub.publish(Int32(self.last_wp))
+            self.state_count += 1
+            return
+
         if self.state != state:
             self.state_count = 0
             self.state = state
