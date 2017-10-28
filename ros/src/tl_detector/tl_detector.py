@@ -101,6 +101,7 @@ class TLDetector(object):
                 self.traffic_light_detector = TLDetection()
                 self.light_classifier = TLClassifier()
                 self._models_initialized = True
+                self.ignore_count = 0
             else:
                 # Import classifier and restore pre-trained weights
                 self.light_classifier = TrafficLightClassifier(input_shape=[64, 64], learning_rate=1e-4)
@@ -149,6 +150,12 @@ class TLDetector(object):
             msg (Image): image from car-mounted camera
 
         """
+        # Throttle image processing because of slow detection
+        if self.detection_method == 'ab2005':
+            self.ignore_count += 1
+            if self.ignore_count % 3 != 0:
+                return
+
         self.has_image = True
         self.camera_image = msg
         light_wp, state = self.process_traffic_lights()
