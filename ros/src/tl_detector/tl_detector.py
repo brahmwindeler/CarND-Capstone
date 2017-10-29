@@ -70,6 +70,7 @@ class TLDetector(object):
         self.config = yaml.load(config_string)
 
         self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
+        self.tl_state_pub = rospy.Publisher('/tl_state', Int32, queue_size=2)
 
         self.bridge = CvBridge()
         self.listener = tf.TransformListener()
@@ -169,6 +170,9 @@ class TLDetector(object):
             self.upcoming_red_light_pub.publish(Int32(light_wp))
         else:
             self.upcoming_red_light_pub.publish(Int32(self.last_wp))
+
+        self.tl_state_pub.publish(Int32(state))
+
         self.state_count += 1
 
     def get_closest_waypoint(self, pose):
