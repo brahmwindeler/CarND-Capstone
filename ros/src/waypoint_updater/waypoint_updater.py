@@ -55,7 +55,7 @@ class WaypointUpdater(object):
         self.num_base_waypoints = 0 # number of all waypoints of the track
 
         self.red_tl_index       = -1    # Index of the next red traffic light from /traffic_waypoint
-        self.max_vel = rospy.get_param('/waypoint_loader/velocity', 40) * 0.27778
+        self.max_vel = rospy.get_param('/waypoint_loader/velocity', 10) * 0.27778
 
         self.loop()
 
