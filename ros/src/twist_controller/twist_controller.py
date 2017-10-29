@@ -33,7 +33,7 @@ class Controller(object):
 
         #self.pid_vel = PID(0.08,0.001, 0.5, self.decel_limit, self.accel_limit)
         #self.pid_vel = PID(0.05747, 0.004702, 0.004702, self.decel_limit, self.accel_limit)
-        #self.pid_vel = PID(10., 0.002, 0.2, self.decel_limit, self.accel_limit)
+        #self.pid_vel = PID(10.0, 0.002, 0.2, self.decel_limit, self.accel_limit)
         #self.pid_vel = PID(2., 0.002, 0.2, self.decel_limit, self.accel_limit)
         self.pid_vel = PID(3.0, 0.009, 0.01, self.decel_limit, self.accel_limit)
 

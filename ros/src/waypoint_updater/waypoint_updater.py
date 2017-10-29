@@ -14,16 +14,12 @@ from waypoint_helper import print_waypoint
 
 '''
 This node will publish waypoints from the car's current position to some `x` distance ahead.
-
 As mentioned in the doc, you should ideally first implement a version which does not care
 about traffic lights or obstacles.
-
 Once you have created dbw_node, you will update this node to use the status of traffic lights too.
-
 Please note that our simulator also provides the exact location of traffic lights and their
 current status in `/vehicle/traffic_lights` message. You can use this message to build this node
 as well as to verify your TL classifier.
-
 TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
@@ -59,7 +55,7 @@ class WaypointUpdater(object):
         self.num_base_waypoints = 0 # number of all waypoints of the track
 
         self.red_tl_index       = -1    # Index of the next red traffic light from /traffic_waypoint
-	self.max_vel = rospy.get_param('/waypoint_loader/velocity', 40) * 0.27778
+        self.max_vel = rospy.get_param('/waypoint_loader/velocity', 40) * 0.27778
 
         self.loop()
 
@@ -95,9 +91,9 @@ class WaypointUpdater(object):
             # Keep only the closest waypoints (also discard distances used to order waypoints)
             waypoints_ahead = [item[0] for item in waypoints_ahead[:LOOKAHEAD_WPS]]
 
-	    # limit velocity
-	    for waypoint in waypoints_ahead:
-                waypoint.twist.twist.linear.x = self.max_vel 
+            # limit velocity
+            for waypoint in waypoints_ahead:
+                    waypoint.twist.twist.linear.x = self.max_vel
 
             # Apply deceleration if there's a traffic light nearby
             if self.red_tl_index > -1:
